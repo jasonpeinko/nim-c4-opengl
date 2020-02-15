@@ -53,7 +53,7 @@ method init*(self: ref Physics2DSystem) {.base.} =
     fill: false
   )
 
-  for i in 0..200:
+  for i in 0..100:
     var e = newEntity()
     e[ref Physics2DBody] = (ref Physics2DBody)(
       position: vec2f(rand(50.0..900.0), rand(50.0..490.0)),

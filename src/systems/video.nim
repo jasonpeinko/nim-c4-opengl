@@ -62,14 +62,8 @@ method renderUI*(self: ref VideoSystem){.base.} =
 method renderDebugDrawRect*(self: ref VideoSystem, entity: Entity, proj: Mat4f) =
   var dd = entity[ref DebugDrawRect]
   var body = entity[ref Physics2DBody]
-  var model = mat4f()
   var proj = self.camera.getProjMatrix(WIDTH, HEIGHT)
-  model = model.translate(vec3f(body.position, 0.0))
-  # self.debug.rect(proj, body.position, (dd.max-dd.min))
-  # debug.setup(proj * model)
-  # debug.start(dd.color)
-  # debug.rect(dd.min, dd.max, dd.fill)
-  self.debug.addRect(dd.min + body.position, dd.max + body.position)
+  self.debug.rect(proj, body.position, (dd.max-dd.min))
 
 proc renderDebugDrawCircle*(self: ref VideoSystem, entity: Entity, proj: Mat4f) =
   var dd = entity[ref DebugDrawCircle]
@@ -77,24 +71,19 @@ proc renderDebugDrawCircle*(self: ref VideoSystem, entity: Entity, proj: Mat4f) 
     return
   var body = entity[ref Physics2DBody]
   var proj = self.camera.getProjMatrix(WIDTH, HEIGHT)
-  var model = mat4f()
-  model = model.translate(vec3f(body.position, 0.0))
-  # self.debug.circle(proj, body.position, dd.radius)
-  # self.debug.addRect(dd.radius - body.position, dd.radius + body.position)
-  self.debug.addCircle(body.position, dd.radius)
+  self.debug.circle(proj, body.position, dd.radius)
 
 method render*(self: ref VideoSystem){.base.} =
-  self.debug.clear()
   var view = self.camera.getViewMatrix()
   var proj = self.camera.getProjMatrix(WIDTH, HEIGHT)
 
   glClearColor(0.3, 0.3, 0.34, 1.0)
   glClear(GL_COLOR_BUFFER_BIT)
+  self.debug.begin()
   for entity, ddRect in getComponents(ref DebugDrawRect):
     self.renderDebugDrawRect(entity, proj)
   for entity, ddRect in getComponents(ref DebugDrawCircle):
     self.renderDebugDrawCircle(entity, proj)
-  self.debug.render(proj)
   self.renderUI()
 
 method update*(self: ref VideoSystem, dt: float){.base.} =
