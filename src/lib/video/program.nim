@@ -1,6 +1,7 @@
 import chronicles
 import tables
 import nimgl/[opengl]
+import strformat
 
 proc statusShader(shader: uint32) =
   var status: int32
@@ -22,31 +23,13 @@ proc load_program*(name: string): ShaderProgram =
   if shaderManager.hasKey(name):
     return shaderManager[name]
   var vertex = glCreateShader(GL_VERTEX_SHADER)
-  var vsrc: cstring = """
-#version 330 core
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec4 aColor;
-uniform mat4 uMVP;
-out vec4 fColor;
-void main() {
-  gl_Position = uMVP * vec4(aPos, 0.0, 1.0);
-  fColor = aColor;
-}
-  """
+  var vsrc: cstring = readFile(&"shaders/v_{name}.glsl")
   glShaderSource(vertex, 1'i32, vsrc.addr, nil)
   glCompileShader(vertex)
   statusShader(vertex)
 
   var fragment = glCreateShader(GL_FRAGMENT_SHADER)
-  var fsrc: cstring = """
-#version 330 core
-out vec4 FragColor;
-uniform vec4 uColor = vec4(1.0, 1.0, 1.0, 1.0);
-in vec4 fColor;
-void main() {
-  FragColor = uColor;
-}
-  """
+  var fsrc: cstring = readFile(&"shaders/f_{name}.glsl")
   glShaderSource(fragment, 1, fsrc.addr, nil)
   glCompileShader(fragment)
   statusShader(fragment)
@@ -63,10 +46,8 @@ void main() {
   var argType: GLenum
   glGetProgramiv(program, GL_ACTIVE_UNIFORMS, count.addr)
   info "uniforms", count=count
-  for i in 0..count:
-    var loc = glGetUniformLocation(program, "uColor")
-    var loc2 = glGetUniformLocation(program, "uMVP")
+  for i in 0..<count:
     glGetActiveUniform(program, i.GLuint, 16, length.addr, size.addr, argType.addr, buff[0].addr)
-    info "uniform", length=length, size=size, name=buff, loc=loc, loc2=loc2
+    info "uniform", length=length, size=size, name=buff
   shaderManager[name] = program
   return program

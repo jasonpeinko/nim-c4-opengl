@@ -18,7 +18,7 @@ import c4/systems/physics/simple
 import c4/entities
 import c4/loop
 import logging
-import ../lib/physics/types
+import ../lib/physics/[types, collision, grid]
 
 randomize()
 
@@ -26,11 +26,30 @@ randomize()
 type
   Physics2DSystem* {.inheritable.} = object
     connected*: bool
+    grid*: SpatialGrid[Entity]
     bounds*: Entity
     circles*: seq[Entity]
 
 # method getComponents*(self: ref Physics2DSystem): Table[Entity, ref AABB] {.base.} =
 #   getComponents(ref AABB)
+proc createCircle(p: Vec2f, v: Vec2f, r: float32): Entity =
+  result = newEntity()
+  result[ref Physics2DBody] = (ref Physics2DBody)(
+    position: p,
+    velocity: v,
+    force: vec2f(0.0, 0.0),
+    angularVelocity: 0.0,
+    rotation: 0.0
+  )
+  result[ref Circle] = (ref Circle)(
+    radius: r
+  )
+  result[ref DebugDrawCircle] = (ref DebugDrawCircle)(
+    radius: r,
+    color: vec4f(0.0, 1.0, 0.8, 1.0),
+    fill: false
+  )
+
 
 method init*(self: ref Physics2DSystem) {.base.} =
   self.connected = false
@@ -52,26 +71,18 @@ method init*(self: ref Physics2DSystem) {.base.} =
     color: vec4f(1.0, 0.0, 1.0, 1.0),
     fill: false
   )
+  self.grid = newSpatialGrid[Entity](self.bounds[ref AABB], 200)
 
-  for i in 0..100:
-    var e = newEntity()
-    e[ref Physics2DBody] = (ref Physics2DBody)(
-      position: vec2f(rand(50.0..900.0), rand(50.0..490.0)),
-      velocity: vec2f(rand(-1.0..1.0), rand(-1.0..1.0)),
-      force: vec2f(0.0, 0.0),
-      angularVelocity: 0.0,
-      rotation: 0.0
-    )
+  for i in 0..2:
+    var position = vec2f(rand(50.0..900.0), rand(50.0..490.0))
+    var velocity = vec2f(rand(-1.0..1.0), rand(-1.0..1.0))
     var r = rand(10.0..30.0)
-    e[ref Circle] = (ref Circle)(
-      radius: r
-    )
-    e[ref DebugDrawCircle] = (ref DebugDrawCircle)(
-      radius: r,
-      color: vec4f(0.0, 1.0, 0.8, 1.0),
-      fill: false
-    )
+    var e = createCircle(position, velocity, r)
     self.circles.add(e)
+  # self.circles.add createCircle(vec2f(100, 100), vec2f(1, 0), 50)
+  # self.circles.add createCircle(vec2f(220, 100), vec2f(-0.5, 0), 30)
+  # self.circles.add createCircle(vec2f(220, 400), vec2f(-1, 0), 50)
+  # self.circles.add createCircle(vec2f(100, 400), vec2f(0.5, 0), 30)
   info "Init Physics"
 
 method update*(self: ref Physics2DSystem, dt: float) {.base.} =
@@ -93,6 +104,17 @@ method update*(self: ref Physics2DSystem, dt: float) {.base.} =
         body.position.y = bounds.max.y - circle.radius
         body.velocity.y *= -1
       msg.updatedMsg(entity, body).send("network")
+    for i in 0..<self.circles.len:
+      for j in (i+1)..<self.circles.len:
+        var a = self.circles[i]
+        var b = self.circles[j]
+        var ac = a[ref Circle]
+        var bc = b[ref Circle]
+        var bodya = a[ref Physics2DBody]
+        var bodyb = b[ref Physics2DBody]
+        var collision = CircleCircle(ac, bc, bodya, bodyb)
+        collision.applyImpulse()
+        # info "test", a=a, b=b, collision=collision.contacts
 
 method dispose*(self: ref Physics2DSystem) {.base.} =
   discard

@@ -1,6 +1,14 @@
 import glm
 
 type
+  # Collision Result
+  Collision* = object
+    a*: ref Physics2DBody
+    b*: ref Physics2DBody
+    penetration*: float32
+    normal*: Vec2f
+    contacts*: seq[Vec2f]
+    relativeVelocity*: Vec2f
   # Physics Component
   AABB* {.inheritable.} = object
     min*: Vec2f
